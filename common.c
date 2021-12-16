@@ -299,7 +299,7 @@ create_framebuffer(const struct egl *egl, struct gbm_bo *bo,
 	return true;
 }
 
-const struct egl * init_egl(const struct gbm *gbm)
+struct egl * init_egl(const struct gbm *gbm)
 {
 	EGLint major, minor;
 
@@ -404,13 +404,13 @@ const struct egl * init_egl(const struct gbm *gbm)
 	eglMakeCurrent(egl.display, egl.surface, egl.surface, egl.context);
 
 	gl_exts = (char *) glGetString(GL_EXTENSIONS);
-	printf("OpenGL ES 2.x information:\n");
-	printf("  version: \"%s\"\n", glGetString(GL_VERSION));
-	printf("  shading language version: \"%s\"\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-	printf("  vendor: \"%s\"\n", glGetString(GL_VENDOR));
-	printf("  renderer: \"%s\"\n", glGetString(GL_RENDERER));
-	printf("  extensions: \"%s\"\n", gl_exts);
-	printf("===================================\n");
+//	printf("OpenGL ES 2.x information:\n");
+//	printf("  version: \"%s\"\n", glGetString(GL_VERSION));
+//	printf("  shading language version: \"%s\"\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+//	printf("  vendor: \"%s\"\n", glGetString(GL_VENDOR));
+//	printf("  renderer: \"%s\"\n", glGetString(GL_RENDERER));
+//	printf("  extensions: \"%s\"\n", gl_exts);
+//	printf("===================================\n");
 
 	get_proc_gl(GL_OES_EGL_image, glEGLImageTargetTexture2DOES);
 

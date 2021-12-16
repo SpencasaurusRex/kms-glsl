@@ -7,7 +7,7 @@
 const float PI = 3.14159265358979323846264;
 
 
-const int MAX_PRIMARY_RAY_STEPS = 64; //decrease this number if it runs slow on your computer
+const int MAX_PRIMARY_RAY_STEPS = 1; //decrease this number if it runs slow on your computer
 
 vec2 rotate2d(vec2 v, float a) { 
 	return vec2(v.x * cos(a) - v.y * sin(a), v.y * cos(a) + v.x * sin(a)); 

@@ -77,17 +77,10 @@ static int legacy_run(const struct gbm *gbm, const struct egl *egl)
 
 	start_time = report_time = get_time_ns();
 
-	while (i < drm.count) {
+	while (1) {
 		unsigned frame = i;
 		struct gbm_bo *next_bo;
 		int waiting_for_flip = 1;
-
-		/* Start fps measuring on second frame, to remove the time spent
-		 * compiling shader, etc, from the fps:
-		 */
-		if (i == 1) {
-			start_time = report_time = get_time_ns();
-		}
 
 		if (!gbm->surface) {
 			glBindFramebuffer(GL_FRAMEBUFFER, egl->fbs[frame % NUM_BUFFERS].fb);
@@ -134,7 +127,9 @@ static int legacy_run(const struct gbm *gbm, const struct egl *egl)
 				return -1;
 			} else if (FD_ISSET(0, &fds)) {
 				printf("user interrupted!\n");
-				return 0;
+				// For some reason this triggers when this program runs at startup
+				// .. so taking out the interrupt handling
+				// return 0;
 			}
 			drmHandleEvent(drm.fd, &evctx);
 		}
@@ -143,9 +138,6 @@ static int legacy_run(const struct gbm *gbm, const struct egl *egl)
 		if (cur_time > (report_time + 2 * NSEC_PER_SEC)) {
 			double elapsed_time = cur_time - start_time;
 			double secs = elapsed_time / (double)NSEC_PER_SEC;
-			unsigned frames = i - 1;  /* first frame ignored */
-			printf("Rendered %u frames in %f sec (%f fps)\n",
-				frames, secs, (double)frames/secs);
 			report_time = cur_time;
 		}
 
@@ -156,16 +148,7 @@ static int legacy_run(const struct gbm *gbm, const struct egl *egl)
 		bo = next_bo;
 	}
 
-	finish_perfcntrs();
-
 	cur_time = get_time_ns();
-	double elapsed_time = cur_time - start_time;
-	double secs = elapsed_time / (double)NSEC_PER_SEC;
-	unsigned frames = i - 1;  /* first frame ignored */
-	printf("Rendered %u frames in %f sec (%f fps)\n",
-		frames, secs, (double)frames/secs);
-
-	dump_perfcntrs(frames, elapsed_time);
 
 	return 0;
 }
