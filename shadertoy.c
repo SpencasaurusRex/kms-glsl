@@ -49,27 +49,27 @@ GLuint tex1;
 GLuint tex2;
 
 static const char *shadertoy_vs =
-		"attribute vec3 position;                            \n"
-		"varying vec2 vertexUV;                              \n"
-		"uniform vec2 iRes;                                  \n"
-		"void main()                                         \n"
-		"{                                                   \n"
-		"    gl_Position = vec4(position, 1.0);              \n"
-		"    vertexUV = (position.xy + vec2(1.0, 1.0)) * 0.5;\n"
-		"    vertexUV.x *= iRes.y/iRes.x;                    \n"
-		"}                                                   \n";
+	"attribute vec3 position;                            \n"
+	"varying vec2 vertexUV;                              \n"
+	"uniform vec2 iRes;                                  \n"
+	"void main()                                         \n"
+	"{                                                   \n"
+	"    gl_Position = vec4(position, 1.0);              \n"
+	"    vertexUV = (position.xy + vec2(1.0, 1.0)) * 0.5;\n"
+	"    vertexUV.x *= iRes.y/iRes.x;                    \n"
+	"}                                                   \n";
 
 static const char *shadertoy_fs =
-		"precision mediump float;                                    \n"
-		"varying vec2 vertexUV;                                      \n"
-		"uniform float iBlend;                                       \n"
-		"uniform sampler2D texture1;                                 \n"
-		"uniform sampler2D texture2;                                 \n"
-		"                                                            \n"
-		"void main()                                                 \n"
-		"{                                                           \n"
-		"    gl_FragColor = texture2D(texture1, vertexUV);           \n"
-		"}                                                           \n";
+	"precision mediump float;                                    \n"
+	"varying vec2 vertexUV;                                      \n"
+	"uniform float iBlend;                                       \n"
+	"uniform sampler2D texture1;                                 \n"
+	"uniform sampler2D texture2;                                 \n"
+	"                                                            \n"
+	"void main()                                                 \n"
+	"{                                                           \n"
+	"    gl_FragColor = texture2D(texture1, vertexUV);           \n"
+	"}                                                           \n";
 
 static const GLfloat vertices[] = {
 	 1.0,  1.0, 0.0,  1.0, 1.0,
