@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <dirent.h>
 
 #include <GLES3/gl3.h>
 
@@ -42,22 +43,32 @@
 
 GLuint vao;
 GLint iBlend;
-GLint iRes;
+GLint i;
 GLint iTex1;
 GLint iTex2;
 GLuint tex1;
 GLuint tex2;
+int tx;
+int ty;
 
 static const char *shadertoy_vs =
-	"attribute vec3 position;                            \n"
-	"varying vec2 vertexUV;                              \n"
-	"uniform vec2 iRes;                                  \n"
-	"void main()                                         \n"
-	"{                                                   \n"
-	"    gl_Position = vec4(position, 1.0);              \n"
-	"    vertexUV = (position.xy + vec2(1.0, 1.0)) * 0.5;\n"
-	"    vertexUV.x *= iRes.y/iRes.x;                    \n"
-	"}                                                   \n";
+	"attribute vec3 position;                                    \n"
+	"varying vec2 vertexUV;                                      \n"
+	"uniform vec2 i;                                             \n"
+	"uniform vec2 t;                                             \n"
+	"void main()                                                 \n"
+	"{                                                           \n"
+	"    gl_Position = vec4(position, 1.0);                      \n"
+	"    vertexUV = (position.xy + vec2(1.0, 1.0)) * 0.5;        \n"
+	"    if (t.x/t.y > i.x/i.y) {                                \n"
+	"        vertexUV.x -= (t.x-t.y/i.y*i.x)/(2.0*t.x);          \n"
+    "        vertexUV.x *= (t.x * i.y) / (t.y * i.x);            \n"
+	"    }                                                       \n"
+	"    else {                                                  \n"
+    "        vertexUV.y -= (t.y-t.x/i.x*i.y)/(2.0*t.y);          \n"
+    "        vertexUV.y *= (t.y * i.x) / (t.x * i.y);            \n"
+	"    }                                                       \n"
+	"}                                                           \n";
 
 static const char *shadertoy_fs =
 	"precision mediump float;                                    \n"
@@ -83,43 +94,74 @@ static const GLuint indices[] = {
     1, 2, 3,
 };
 
-static void load_textures() {
-	// printf("Loading textures\n");
-	// unsigned int x, y, n;
-	// unsigned char* data = stbi_load("/home/pi/test.bmp", &x, &y, &n, 3);
+uint fileIndex = 0;
 
-	// glActiveTexture(GL_TEXTURE0);
-    // glBindTexture(GL_TEXTURE_2D, tex1);
-	// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, x, y, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	// glActiveTexture(GL_TEXTURE1);
-	// glBindTexture(GL_TEXTURE_2D, tex2);
-	// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, x, y, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+static void load_textures() {
+	DIR *d;
+	struct dirent *dir;
+	
+	const char* pics = "/home/pi/Projects/Pictures/%s";
+
+	fileIndex++;
+
+	while (true) {
+		d = opendir("/home/pi/Projects/Pictures");
+		int j = 0;
+		while ((dir = readdir(d)) != NULL) {
+			if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0) continue;
+			if (j == fileIndex) {
+				char* file;
+				asprintf(&file, pics, dir->d_name);
+				printf("Loading %s\n", file);
+				unsigned int x, y, n;
+				unsigned char* data = stbi_load(file, &x, &y, &n, 4);
+				printf("%d x %d with %d channels\n", x, y, n);
+
+				printf("%f\n", ((float)tx - (((float)ty / y) * x)) / (2.0 * tx));
+
+				glBindTexture(GL_TEXTURE_2D, tex1);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+				glGenerateMipmap(GL_TEXTURE_2D);
+				glUniform2f(i, x, y);
+				
+				free(file);
+				free(data);
+
+				if (glGetError() != 0) {
+					printf("Error loading texture, trying next\n");
+
+					continue;
+				}
+				closedir(d);
+				return;
+			}
+			j++;
+		}
+		fileIndex = 0;
+		closedir(d);
+	}
 }
 
 uint64_t picture_start = 0;
 
-static void check_error() {
-	if (glGetError() != 0) {
-		printf("Uh oh error!\n");
-	}
-}
+int switchTime = 10;
 
 static void draw_shadertoy() {
-	
+	if (picture_start == 0) {
+		picture_start = get_time_ns();
+	}
 
-	// double time = (get_time_ns() - picture_start) / (double) NSEC_PER_SEC;
+	double time = (get_time_ns() - picture_start) / (double) NSEC_PER_SEC;
 
-	// if (picture_start == 0 || time > 60) {
-	// 	load_textures();
-	// 	picture_start = get_time_ns();
-	// 	time = (get_time_ns() - picture_start) / (double) NSEC_PER_SEC;
-	// }
-	// glUniform1f(iBlend, time / 1.0);
+	if (time > switchTime) {
+		load_textures();
+		picture_start = get_time_ns();
+		time = (get_time_ns() - picture_start) / (double) NSEC_PER_SEC;
+	}
+	glUniform1f(iBlend, time / 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindVertexArray(vao);
-	// printf("Drawing\n");
 	
-	// glDrawArrays(GL_TRIANGLES, 0, 6);
 	glDrawElements(GL_TRIANGLES, sizeof(indices), GL_UNSIGNED_INT, 0);
 }
 
@@ -142,24 +184,7 @@ int init_shadertoy(const struct gbm *gbm, struct egl *egl) {
 	}
 
 	glViewport(0, 0, gbm->width, gbm->height);
-
-
 	stbi_set_flip_vertically_on_load(1);
-
-	unsigned int x, y, n;
-	unsigned char* data = stbi_load("/home/pi/test2.jpg", &x, &y, &n, 4);
-
-	glGenTextures(1, tex1);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, tex1);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER_NV);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER_NV);
-
-	float borderColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR_NV, borderColor);  
 
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
@@ -169,8 +194,6 @@ int init_shadertoy(const struct gbm *gbm, struct egl *egl) {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
 	glEnableVertexAttribArray(0);
-	// glVertexAttribPointer(1, 2, GL_FLOAT, GL_TRUE, 5 * sizeof(float), 2 * sizeof(float));
-	// glEnableVertexAttribArray(1);
 
 	glGenBuffers(1, &ebo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -182,13 +205,27 @@ int init_shadertoy(const struct gbm *gbm, struct egl *egl) {
 	glUseProgram(program);
 
 	iBlend = glGetUniformLocation(program, "iBlend");
-	iRes = glGetUniformLocation(program, "iRes");
+	i = glGetUniformLocation(program, "i");
 	iTex1 = glGetUniformLocation(program, "texture1");
 	iTex2 = glGetUniformLocation(program, "texture2");
+	GLint t = glGetUniformLocation(program, "t");
+	glUniform2f(t, gbm->width, gbm->height);
+
+	tx = gbm->width;
+	ty = gbm->height;
+
+	glGenTextures(1, tex1);
+	glActiveTexture(GL_TEXTURE0);
+	load_textures();
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER_NV);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER_NV);
+
+	float borderColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR_NV, borderColor);
 
 	glUniform1i(iTex1, 0);
 	glUniform1i(iTex2, 1);
-	glUniform2f(iRes, x, y);
 
 	egl->draw = draw_shadertoy;
 
