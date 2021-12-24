@@ -258,22 +258,6 @@ int init_drm(struct drm *drm, const char *device, const char *mode_str,
 		return -1;
 	}
 
-	/* find user requested mode: */
-	if (mode_str && *mode_str) {
-		for (i = 0; i < connector->count_modes; i++) {
-			drmModeModeInfo *current_mode = &connector->modes[i];
-
-			if (strcmp(current_mode->name, mode_str) == 0) {
-				if (vrefresh == 0 || current_mode->vrefresh == vrefresh) {
-					drm->mode = current_mode;
-					break;
-				}
-			}
-		}
-		if (!drm->mode)
-			printf("requested mode not found, using default mode!\n");
-	}
-
 	/* find preferred mode or the highest resolution mode: */
 	if (!drm->mode) {
 		for (i = 0, area = 0; i < connector->count_modes; i++) {

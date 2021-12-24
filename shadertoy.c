@@ -117,8 +117,6 @@ static void load_textures() {
 				unsigned char* data = stbi_load(file, &x, &y, &n, 4);
 				printf("%d x %d with %d channels\n", x, y, n);
 
-				printf("%f\n", ((float)tx - (((float)ty / y) * x)) / (2.0 * tx));
-
 				glBindTexture(GL_TEXTURE_2D, tex1);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 				glGenerateMipmap(GL_TEXTURE_2D);
@@ -209,7 +207,9 @@ int init_shadertoy(const struct gbm *gbm, struct egl *egl) {
 	iTex1 = glGetUniformLocation(program, "texture1");
 	iTex2 = glGetUniformLocation(program, "texture2");
 	GLint t = glGetUniformLocation(program, "t");
-	glUniform2f(t, gbm->width, gbm->height);
+	// glUniform2f(t, gbm->width, gbm->height);
+	glUniform2f(t, 1440, 1080); // Since my screen is 4:3 physically, need to pretend it is in resolution
+	printf("Target resolution: %d x %d\n", gbm->width, gbm->height);
 
 	tx = gbm->width;
 	ty = gbm->height;
